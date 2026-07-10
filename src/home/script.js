@@ -34,6 +34,8 @@ let sessionId =
 const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = 1200;
 
+const EMPTY_RESPONSE_MESSAGE = '¿Hay algo más en lo que pueda ayudarte? ¡Cuac!';
+
 const FALLBACK_MESSAGE =
   'Lo siento, no pude obtener una respuesta en este momento. ' +
   '¿Podrías intentarlo de nuevo en unos instantes?';
@@ -58,8 +60,15 @@ async function fetchAgentReply(text, sessionId) {
   });
 
   if (!res.ok) {
+    let body = null;
+    try {
+      body = await res.json();
+    } catch (parseErr) {
+      console.error('[chat] Could not parse HTTP error body:', parseErr);
+    }
     const err = new Error('HTTP_ERROR');
     err.status = res.status;
+    err.body = body;
     throw err;
   }
 
@@ -111,7 +120,6 @@ async function send() {
     try {
       const reply = await fetchAgentReply(text, sessionId);
       botText = extractBotText(reply);
-      if (botText) break;
     } catch (err) {
       if (err.message === 'HTTP_ERROR') {
         if (currentId !== requestId) {
@@ -119,10 +127,7 @@ async function send() {
           return;
         }
         showTyping(false);
-        addMessage(
-          `Ocurrió un error al contactar al servidor (${err.status}). Intenta de nuevo más tarde.`,
-          'bot',
-        );
+        addMessage(FALLBACK_MESSAGE, 'bot');
         sendBtn.disabled = false;
         sendBtn.classList.remove('loading');
         return;
@@ -134,10 +139,7 @@ async function send() {
           return;
         }
         showTyping(false);
-        addMessage(
-          'No pude conectarme al servidor. Verifica tu conexión e intenta de nuevo.',
-          'bot',
-        );
+        addMessage(FALLBACK_MESSAGE, 'bot');
         sendBtn.disabled = false;
         sendBtn.classList.remove('loading');
         return;
@@ -151,7 +153,7 @@ async function send() {
   }
 
   showTyping(false);
-  addMessage(botText ?? FALLBACK_MESSAGE, 'bot');
+  addMessage(botText ?? EMPTY_RESPONSE_MESSAGE, 'bot');
   sendBtn.disabled = false;
   sendBtn.classList.remove('loading');
 }
