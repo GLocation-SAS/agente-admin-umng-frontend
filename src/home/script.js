@@ -120,6 +120,9 @@ async function send() {
     try {
       const reply = await fetchAgentReply(text, sessionId);
       botText = extractBotText(reply);
+      if (botText) {
+        break;
+      }
     } catch (err) {
       if (err.message === 'HTTP_ERROR') {
         if (currentId !== requestId) {
